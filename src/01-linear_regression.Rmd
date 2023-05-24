@@ -1,0 +1,28 @@
+```{r}
+# install.packages("ProjectTemplate")
+library("ProjectTemplate")
+load.project()
+
+```
+
+```{r}
+attach(grouped_accidents)
+fit_simple <- lm(mean_temperature ~ accident_count)
+
+```
+
+```{r}
+summary(fit_simple)
+```
+
+```{r}
+plot(mean_temperature, accident_count, ylim=c(0,3000))
+abline(fit_simple)
+```
+
+```{r}
+
+fit_la <- lm(accident_count ~ . - accident_count - State - County, data=grouped_accidents)
+summary(fit_la)
+
+```
