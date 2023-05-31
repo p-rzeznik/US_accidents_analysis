@@ -1,0 +1,47 @@
+```{r}
+# install.packages("ProjectTemplate")
+library("ProjectTemplate")
+load.project()
+```
+
+```{r}
+ga <- na.omit(grouped_accidents)
+attach(ga)
+```
+```{r}
+fit_simple <- glm(mean_temperature - min(mean_temperature ,na.rm=TRUE) ~ accident_count, family = poisson(link="log"))
+summary(fit_simple)
+
+```
+```{r}
+# install.packages("ggplot2")
+library(ggplot2)
+ggplot(data=ga, aes(x=mean_temperature - min(mean_temperature ,na.rm=TRUE), y=accident_count)) + 
+    geom_point() +
+    geom_smooth(method = 'glm', method.args = list(family = 'poisson'))
+```
+```{r}
+fit_simple2 <- glm(mean_distance ~ accident_count, family = poisson(link="log"))
+summary(fit_simple2)
+```
+```{r}
+ggplot(data=ga, aes(x=mean_distance, y=accident_count)) + 
+    geom_point() +
+    geom_smooth(method = 'glm', method.args = list(family = 'poisson'))
+```
+
+```{r}
+fit_simple3 <- glm(amenity_frac ~ accident_count, family = poisson(link="log"))
+summary(fit_simple3)
+
+```
+```{r}
+ggplot(data=ga, aes(x=amenity_frac, y=accident_count)) + 
+    geom_point() +
+    geom_smooth(method = 'glm', method.args = list(family = 'poisson'))
+```
+
+```{r}
+fit_la <- glm(accident_count ~ . - accident_count - State - County, data=ga, family = poisson(link="log"))
+summary(fit_la)
+```
