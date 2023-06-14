@@ -1,0 +1,107 @@
+```{r}
+# install.packages("glmnet")
+library("ProjectTemplate")
+library(glmnet)
+load.project()
+
+```
+```{r}
+ga <- na.omit(grouped_accidents)
+```
+
+```{r}
+X <- model.matrix(mean_severity ~ . - State - County, data = ga)[, -1]
+y <- ga$mean_severity
+```
+```{r}
+lambda_grid <- 10^seq(10, -2, length.out = 100)
+fit_ridge <- glmnet(X, y, alpha = 0, lambda = lambda_grid)
+```
+
+```{r}
+dim(coef(fit_ridge))
+
+```
+
+```{r}
+fit_ridge$lambda[50]
+coef_ridge <- coef(fit_ridge)[, 50]
+
+```
+
+```{r}
+fit_ridge$lambda[70]
+coef(fit_ridge)[, 70]
+sqrt(sum(coef(fit_ridge)[-1, 70]^2))
+```
+
+```{r}
+predict(fit_ridge, s = 50, type = "coefficients")
+
+```
+
+
+```{r}
+set.seed(1)
+n <- nrow(X)
+train <- sample(n, n / 2)
+test <- -train
+fit_ridge <- glmnet(X[train,], y[train], alpha = 0, lambda = lambda_grid,
+                    thresh = 1e-12)
+```
+
+
+# Porównanie
+```{r}
+pred_ridge_0 <- predict(fit_ridge, x = X[train,], y = y[train], s = 0, 
+                      newx = X[test,], exact = TRUE)
+mean((pred_ridge_0 - y[test])^2)
+```
+
+```{r}
+lm(y ~ X, subset = train)
+predict(fit_ridge, x = X[train,], y = y[train], s = 0, exact = TRUE, 
+        type = "coefficients")[1:20,]
+```
+
+```{r}
+set.seed(1)
+cv_out <- cv.glmnet(X[train,], y[train], alpha = 0)
+plot(cv_out)
+cv_out$lambda.min
+cv_out$lambda.1se
+```
+
+
+```{r}
+pred_ridge_opt <- predict(fit_ridge, s = cv_out$lambda.min, newx = X[test,])
+mean((pred_ridge_opt - y[test])^2)
+
+```
+
+```{r}
+fit_ridge_full <- glmnet(X, y, alpha = 0)
+predict(fit_ridge_full, s = cv_out$lambda.min, type = "coefficients")
+```
+
+lasso
+```{r}
+fit_lasso <- glmnet(X[train,], y[train], alpha = 1)
+plot(fit_lasso, xvar = "lambda")
+```
+
+```{r}
+cv_out <- cv.glmnet(X[train,], y[train], alpha = 1)
+plot(cv_out)
+cv_out$lambda.min
+pred_lasso <- predict(fit_lasso, s = cv_out$lambda.min, newx = X[test,])
+mean((pred_lasso - y[test])^2)
+```
+
+```{r}
+fit_lasso_full <- glmnet(X, y, alpha = 1)
+predict(fit_lasso_full, s = cv_out$lambda.1se, type = "coefficients")[1:20,]
+```
+```{r}
+predict(fit_lasso, s = cv_out$lambda.min, type = "coefficients")[1:20,]
+```
