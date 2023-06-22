@@ -1,14 +1,27 @@
+---
+editor_options:
+  markdown:
+    wrap: 72
+---
+
 ```{r}
 # install.packages("ProjectTemplate")
 library("ProjectTemplate")
+setwd("C:/Users/piotr/Workspaces/Statystyka/us_accidents_analysis")
 load.project()
 
 ```
 
-```{r}
-attach(grouped_accidents)
-fit_simple <- lm(mean_temperature ~ accident_count)
+W poniższych przykładach spróbujemy znaleźć liniowe zależności pomiędzy
+liczbą wypadków w hrabstwach, a czynnikami opisującymi hrabstwa i ich
+statystyki wypadków.
 
+Najpierw wzięty został pod uwagę procęt ludności z wykształceniem
+wyższym.
+
+```{r}
+attach(g1)
+fit_simple <- lm(accident_count ~ Higher.Education)
 ```
 
 ```{r}
@@ -16,13 +29,57 @@ summary(fit_simple)
 ```
 
 ```{r}
-plot(mean_temperature, accident_count, ylim=c(0,3000))
+plot(Higher.Education, accident_count)
 abline(fit_simple)
 ```
 
+Można zobaczyć, że zmienne są słabo ze sobą powiązane biorąc pod uwagę
+R-sqared na poziomie 0.019
+
+Kolejną zmienną wziętą pod uwagę był przychód.
+
+```{r}
+fit_simple2 <- lm(accident_count ~ Income)
+
+```
+
+```{r}
+summary(fit_simple2)
+```
+
+```{r}
+plot(Income, accident_count, ylim=c(0,7000), xlim=c(0,400000))
+abline(fit_simple2)
+```
+
+Tutaj dopasowanie jest o wiele lepsze niż w przypadku wyższej edukacji.
+R-squared na poziomie 0.644. Na wykresie także jest widoczna liniowa
+zależność pomiędzy zmiennymi.
+
+Sprawdziliśmy także jakie znaczenie mają wszystkie zmienne opisujące
+dane hrabstwo.
+
 ```{r}
 
-fit_la <- lm(accident_count ~ . - accident_count - State - County, data=grouped_accidents)
+fit_la <- lm(accident_count ~ . - accident_count - State - County, data=g1)
 summary(fit_la)
 
 ```
+
+R-squared wzrósł nieznacznie, do poziomu 0.669, względem modelu
+liniowego uwzględniającego tylko income. Najbardziej znaczące zmienne to
+kolejno: Income(+), traffic_signal_frac(-), junction_frac(-),
+station_frac(+), r_side_frac(-), Income.inequality(-)
+
+Sprawdziliśmy także jakie czynniki wpływają na powagę wypadku.
+
+```{r}
+
+fit_la <- lm(mean_severity ~ . - mean_severity - State - County, data=g1)
+summary(fit_la)
+
+```
+
+Miara R-suqred jest niska i wynosi 0.321. Najbardziej znaczące zmienne
+to kolejno: mean_temperature(+), mean_wind_chill(-), r_side_frac(-),
+mean_distance(+), Higher.Education(-), Violent.crime(-), day_frac(+)

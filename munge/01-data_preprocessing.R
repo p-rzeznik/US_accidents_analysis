@@ -4,6 +4,10 @@
 if (file.exists("./data/grouped_accidents.csv")) {
 
     grouped_accidents <- read.csv("./data/grouped_accidents.csv")
+
+    other_data <- read.csv("./data/data.csv");
+    g1 <- merge(grouped_accidents, other_data, by = c("State", "County"))
+
 } else {
 
 library(dplyr)
@@ -37,6 +41,9 @@ grouped_accidents <- grouped %>% summarise(
                         turning_loop_frac=sum(Turning_Loop=="True")/n(),
                         day_frac=sum(Sunrise_Sunset=="Day")/n(),
                         .groups = 'drop')
+
+    other_data <- read.csv("./data/data.csv");
+    g1 <= merge(grouped_accidents, other_data, by = c("State", "County"))
 
     write.csv(grouped_accidents, "./data/grouped_accidents.csv", row.names=FALSE)
 

@@ -1,42 +1,53 @@
 ```{r}
 # install.packages("ProjectTemplate")
 library("ProjectTemplate")
+setwd("C:/Users/piotr/Workspaces/Statystyka/us_accidents_analysis")
 load.project()
 ```
 
 ```{r}
-ga <- na.omit(grouped_accidents)
+ga <- na.omit(g1)
 attach(ga)
 ```
-```{r}
-fit_simple <- glm(mean_temperature - min(mean_temperature ,na.rm=TRUE) ~ accident_count, family = poisson(link="log"))
-summary(fit_simple)
 
+Zgodnie z sugestią spróbowaliśmy dopasować model regresji Poissona do naszych danych.
+Dopasowaliśmy modele, i sprawdziliśmy je na podstawie hipotez i statystyki X-squared. 
+```{r}
+fit_simple <- glm(accident_count ~ Income , family = poisson(link="log"))
+summary(fit_simple)
+chisq.test(table(accident_count, Income))
 ```
+Summary:
+    Null deviance: 12496420  on 2306  degrees of freedom
+Residual deviance:  7626288  on 2305  degrees of freedom
+AIC: 7640845
+
+X-squared = 1866377, df = 1858518, p-value = 2.34e-05
+
+
 ```{r}
 # install.packages("ggplot2")
 library(ggplot2)
-ggplot(data=ga, aes(x=mean_temperature - min(mean_temperature ,na.rm=TRUE), y=accident_count)) + 
+ggplot(data=ga, aes(x=Income, y=accident_count )) + 
     geom_point() +
     geom_smooth(method = 'glm', method.args = list(family = 'poisson'))
 ```
 ```{r}
-fit_simple2 <- glm(mean_distance ~ accident_count, family = poisson(link="log"))
+fit_simple2 <- glm(mean_severity ~ Higher.Education, family = poisson(link="log"))
 summary(fit_simple2)
-```
-```{r}
-ggplot(data=ga, aes(x=mean_distance, y=accident_count)) + 
-    geom_point() +
-    geom_smooth(method = 'glm', method.args = list(family = 'poisson'))
-```
-
-```{r}
-fit_simple3 <- glm(amenity_frac ~ accident_count, family = poisson(link="log"))
-summary(fit_simple3)
+chisq.test(table(mean_severity, Higher.Education))
 
 ```
+Summary:
+    Null deviance: 238.12  on 2306  degrees of freedom
+Residual deviance: 227.14  on 2305  degrees of freedom
+AIC: Inf
+
+X-squared = 3402825, df = 3401350, p-value = 0.2858
+
+
 ```{r}
-ggplot(data=ga, aes(x=amenity_frac, y=accident_count)) + 
+ggplot(data=ga, aes(x=Higher.Education, y=mean_severity)) + 
     geom_point() +
     geom_smooth(method = 'glm', method.args = list(family = 'poisson'))
 ```
@@ -45,3 +56,15 @@ ggplot(data=ga, aes(x=amenity_frac, y=accident_count)) +
 fit_la <- glm(accident_count ~ . - accident_count - State - County, data=ga, family = poisson(link="log"))
 summary(fit_la)
 ```
+Summary:
+    Null deviance: 12496420  on 2306  degrees of freedom
+Residual deviance:  1608280  on 2273  degrees of freedom
+AIC: 1622901
+
+```{r}
+X2 <- fit_la$null.deviance - fit_la$deviance
+df <- fit_la$df.null - fit_la$df.residual
+pchisq(q=X2, df=df, lower.tail=FALSE)
+```
+
+X-squared = 10888140, df = 33, p-value = 0

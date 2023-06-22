@@ -1,0 +1,116 @@
+```{r}
+# install.packages("glmnet")
+library("ProjectTemplate")
+library(glmnet)
+setwd("C:/Users/piotr/Workspaces/Statystyka/us_accidents_analysis")
+load.project()
+
+```
+
+
+```{r}
+ga <- na.omit(g1)
+```
+
+W tym notebooku będziemy szukać optymalnych wartości lambda dla regresji grzbietowej i regresji lasso.
+Bierzemy pod uwagę zmienną accident_count.
+
+
+Regresja grzbietowa:
+```{r}
+X <- model.matrix(accident_count ~ . - State - County, data = ga)[, -1]
+y <- ga$accident_count
+```
+```{r}
+lambda_grid <- 10^seq(10, -2, length.out = 100)
+fit_ridge <- glmnet(X, y, alpha = 0, lambda = lambda_grid)
+```
+
+```{r}
+dim(coef(fit_ridge))
+
+```
+```{r}
+set.seed(1)
+n <- nrow(X)
+train <- sample(n, n / 2)
+test <- -train
+fit_ridge <- glmnet(X[train,], y[train], alpha = 0, lambda = lambda_grid,
+                    thresh = 1e-12)
+```
+
+
+Porównanie:
+```{r}
+pred_ridge_0 <- predict(fit_ridge, x = X[train,], y = y[train], s = 0, 
+                      newx = X[test,], exact = TRUE)
+mean((pred_ridge_0 - y[test])^2)
+```
+
+```{r}
+set.seed(1)
+cv_out <- cv.glmnet(X[train,], y[train], alpha = 0)
+plot(cv_out)
+cv_out$lambda.min
+cv_out$lambda.1se
+```
+
+
+```{r}
+pred_ridge_opt <- predict(fit_ridge, s = cv_out$lambda.min, newx = X[test,])
+mean((pred_ridge_opt - y[test])^2)
+mean((pred_ridge_0 - y[test])^2) - mean((pred_ridge_opt - y[test])^2)
+
+```
+Dla najlepszej lambdy mse jest mniejsze niż dla zwykłego modelu liniowego.
+l=0     =>    mse=16389901
+l=min   =>    mse=13426256
+delta   =         2963645
+
+```{r}
+fit_ridge_full <- glmnet(X, y, alpha = 0)
+predict(fit_ridge_full, s = cv_out$lambda.min, type = "coefficients")
+```
+
+Regresja lasso:
+```{r}
+fit_lasso <- glmnet(X[train,], y[train], alpha = 1)
+plot(fit_lasso, xvar = "lambda")
+```
+Na powyższym obrazku obserwujemy zmianę estymat współczynników w zależności od lambdy.
+
+```{r}
+cv_out <- cv.glmnet(X[train,], y[train], alpha = 1)
+plot(cv_out)
+cv_out$lambda.min
+```
+
+```{r}
+fit_lasso_full <- glmnet(X, y, alpha = 1)
+predict(fit_lasso_full, s = cv_out$lambda.1se, type = "coefficients")
+```
+Regresja lasso poprzez zerowanie się estymat współczynników powoduje selekcję istotnych cech.
+Dla lambda.1st pozostała jedna znacząca zmienna - Income.
+```{r}
+predict(fit_lasso, s = cv_out$lambda.min, type = "coefficients")
+```
+Dla lambda.min pozostało 12 z 35 zmiennych.
+
+
+Porównanie:
+```{r}
+pred_lasso_0 <- predict(fit_lasso, x = X[train,], y = y[train], s = 0, 
+                      newx = X[test,], exact = TRUE)
+mean((pred_lasso_0 - y[test])^2)
+```
+```{r}
+pred_lasso <- predict(fit_lasso, s = cv_out$lambda.min, newx = X[test,])
+mean((pred_lasso - y[test])^2)
+mean((pred_lasso_0 - y[test])^2) - mean((pred_lasso - y[test])^2)
+```
+Dla najlepszej lambdy mse jest mniejsze niż dla zwykłego modelu liniowego.
+l=0     =>    mse=16390441
+l=min   =>    mse=13940613
+delta   =         2449828
+
+Regresja grzbietowa otrzymuje mniejszy błąd mse przy optymalnej lambdzie.

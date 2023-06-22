@@ -2,102 +2,93 @@
 library(ISLR)
 library(splines)
 library("ProjectTemplate")
+setwd("C:/Users/piotr/Workspaces/Statystyka/us_accidents_analysis")
 load.project()
 ```
+
 ```{r}
-ga <- na.omit(grouped_accidents)
+ga <- na.omit(g1)
 ```
+Metody nieliniowe w regresji zmiennej accident_count.
 
 
+Regresja wielomianowa:
 ```{r}
-fit_poly <- lm(mean_severity ~ poly(accident_count, 7), data = ga)
+fit_poly <- lm(accident_count ~ poly(Income, 4), data = ga)
 summary(fit_poly)
 ```
+Regresja wielomianowa uzyskała R-squared = 0.7652 co jest lepszym wynikiem od wyniku regresji liniowej.
 
 
 ```{r}
-acc_lims <- range(ga$accident_count)
+acc_lims <- c(0,2000000)
 acc_grid <- seq(acc_lims[1], acc_lims[2])
-pred_poly <- predict(fit_poly, list(accident_count = acc_grid), se.fit = TRUE)
+pred_poly <- predict(fit_poly, list(Income = acc_grid), se.fit = TRUE)
 se_bands <- cbind(pred_poly$fit + 2 * pred_poly$se.fit, 
                   pred_poly$fit - 2 * pred_poly$se.fit)
-plot(ga$accident_count, ga$mean_severity, col = "darkgrey", cex = 0.5, xlim = acc_lims)
+plot(ga$Income, ga$accident_count, col = "darkgrey", cex = 0.5, xlim = acc_lims)
 lines(acc_grid, pred_poly$fit, col = "red", lwd = 2)
 matlines(acc_grid, se_bands, col = "red", lty = "dashed")
 ```
 
+# Funkcje sklejane
+Ustalone węzły:
 ```{r}
-table(cut(ga$accident_count, breaks = 10))
-
-```
-
-```{r}
-fit_step <- lm(mean_severity ~ cut(accident_count, 10), data = ga)
-pred_step <- predict(fit_step, list(accident_count = acc_grid), se.fit = TRUE)
-se_bands <- cbind(pred_step$fit + 2 * pred_step$se.fit, 
-                  pred_step$fit - 2 * pred_step$se.fit)
-plot(ga$accident_count, ga$mean_severity, col = "darkgrey", cex = 0.5, xlim = acc_lims)
-lines(acc_grid, pred_step$fit, col = "red", lwd = 2)
-matlines(acc_grid, se_bands, col = "red", lty = "dashed")
-```
-
-```{r}
-fit_bs_knots <- lm(mean_severity ~ bs(accident_count, knots = c(2500, 10000, 40000)), data = ga)
-pred_bs_knots <- predict(fit_bs_knots, list(accident_count = acc_grid), se.fit = TRUE)
-plot(ga$accident_count, ga$mean_severity, cex = 0.5, col = "darkgrey")
+fit_bs_knots <- lm(accident_count ~ bs(Income, knots = c(2500, 40000, 500000)), data = ga)
+pred_bs_knots <- predict(fit_bs_knots, list(Income = acc_grid), se.fit = TRUE)
+plot(ga$Income, ga$accident_count, cex = 0.5, col = "darkgrey",xlim=c(0,2000000))
 lines(acc_grid, pred_bs_knots$fit, col = "red", lwd = 2)
 lines(acc_grid, pred_bs_knots$fit + 2 * pred_bs_knots$se.fit, col = "red",
       lty = "dashed")
 lines(acc_grid, pred_bs_knots$fit - 2 * pred_bs_knots$se.fit, col = "red",
       lty = "dashed")
-abline(v = c(2500, 10000, 40000), lty = "dotted")
+abline(v = c(2500, 40000, 500000), lty = "dotted")
 ```
+Węzły ustalane dynamicznie:
 
 ```{r}
-fit_bs_df <- lm(mean_severity ~ bs(accident_count, df = 6), data = ga)
-pred_bs_df <- predict(fit_bs_df, list(accident_count = acc_grid), se.fit = TRUE)
-plot(ga$accident_count, ga$mean_severity, cex = 0.5, col = "darkgrey")
+fit_bs_df <- lm(accident_count ~ bs(Income, df = 6), data = ga)
+pred_bs_df <- predict(fit_bs_df, list(Income = acc_grid), se.fit = TRUE)
+plot(ga$Income, ga$accident_count, cex = 0.5, col = "darkgrey" , xlim=c(0,2000000))
 lines(acc_grid, pred_bs_df$fit, col = "red", lwd = 2)
 lines(acc_grid, pred_bs_df$fit + 2 * pred_bs_df$se.fit, col = "red",
       lty = "dashed")
 lines(acc_grid, pred_bs_df$fit - 2 * pred_bs_df$se.fit, col = "red",
       lty = "dashed")
-bs_knots <- attr(bs(ga$accident_count, df = 6), "knots")
+bs_knots <- attr(bs(ga$Income, df = 6), "knots")
 abline(v = bs_knots, lty = "dotted")
+bs_knots
 
 ```
 
+# Naturalne funkcje sklejane
+
 ```{r}
-fit_ns <- lm(mean_severity ~ ns(accident_count, df = 4), data = ga)
-pred_ns <- predict(fit_ns, list(accident_count = acc_grid), se.fit = TRUE)
-plot(ga$accident_count, ga$mean_severity, cex = 0.5, col = "darkgrey")
+fit_ns <- lm(accident_count ~ ns(Income, df = 4), data = ga)
+pred_ns <- predict(fit_ns, list(Income = acc_grid), se.fit = TRUE)
+plot(ga$Income, ga$accident_count, cex = 0.5, col = "darkgrey", xlim=c(0,2000000))
 lines(acc_grid, pred_ns$fit, col = "red", lwd = 2)
 lines(acc_grid, pred_ns$fit + 2 * pred_ns$se.fit, col = "red",
       lty = "dashed")
 lines(acc_grid, pred_ns$fit - 2 * pred_ns$se.fit, col = "red",
       lty = "dashed")
-abline(v = attr(ns(ga$accident_count, df = 4), "knots"), lty = "dotted")
+abline(v = attr(ns(ga$Income, df = 4), "knots"), lty = "dotted")
 ```
+# Wygładzające funkcje sklejane
 
 ```{r}
-fit_smooth_df <- smooth.spline(ga$accident_count, ga$mean_severity, df = 16)
-plot(ga$accident_count, ga$mean_severity, cex = 0.5, col = "darkgrey")
-lines(fit_smooth_df, col = "red", lwd = 2)
+fit_smooth_cv <- smooth.spline(ga$Income, ga$accident_count, cv=TRUE)
+plot(ga$Income, ga$accident_count, cex = 0.5, col = "darkgrey", xlim=c(0,2000000))
+lines(fit_smooth_cv, col = "red", lwd = 2)
 ```
-
-```{r}
-fit_smooth_cv <- smooth.spline(ga$accident_count, ga$mean_severity, cv=TRUE)
-plot(ga$accident_count, ga$mean_severity, cex = 0.5, col = "darkgrey")
-lines(fit_smooth_df, col = "red", lwd = 2)
-```
-
+# Regresja lokalna
 ```{r}
 spans <- c(0.2, 0.5)
 clrs <- c("red", "blue")
-plot(ga$accident_count, ga$mean_severity, cex = 0.5, col = "darkgrey")
+plot(ga$Income, ga$accident_count, cex = 0.5, col = "darkgrey", xlim=c(0,2000000))
 for (i in 1:length(spans)) {
-   fit_loess <- loess(mean_severity ~ accident_count, span = spans[i], data = ga)
-   pred_loess <- predict(fit_loess, data.frame(accident_count = acc_grid))
+   fit_loess <- loess(accident_count ~ Income, span = spans[i], data = ga)
+   pred_loess <- predict(fit_loess, data.frame(Income = acc_grid))
    lines(acc_grid, pred_loess, col = clrs[i], lwd = 2)
 }
 legend("topright", legend = paste("s =", spans), col = clrs, lty = 1, lwd = 2)
@@ -105,26 +96,26 @@ legend("topright", legend = paste("s =", spans), col = clrs, lty = 1, lwd = 2)
 ```{r}
 spans <- c(0.2, 0.5)
 clrs <- c("red", "blue")
-plot(ga$accident_count, ga$mean_severity, cex = 0.5, col = "darkgrey")
+plot(ga$Higher.Education, ga$mean_severity, cex = 0.5, col = "darkgrey")
 for (i in 1:length(spans)) {
-   fit_loess <- loess(mean_severity ~ accident_count, span = spans[i], degree = 1, data = ga)
-   pred_loess <- predict(fit_loess, data.frame(accident_count = acc_grid))
+   fit_loess <- loess(mean_severity ~ Higher.Education, span = spans[i], degree = 1, data = ga)
+   pred_loess <- predict(fit_loess, data.frame(Higher.Education = acc_grid))
    lines(acc_grid, pred_loess, col = clrs[i], lwd = 2)
 }
 legend("topright", legend = paste("s =", spans), col = clrs, lty = 1, lwd = 2)
 ```
 
+# GAM
 ```{r}
-fit_gam_ls <- lm(mean_severity ~ ns(accident_count, df = 8) + ns(mean_humidity, df = 7) + mean_visibility,
+fit_gam_ls <- lm(accident_count ~ ns(Income, df = 7) + ns(traffic_signal_frac, df = 5) + Income.inequality,
                  data = ga)
-fit_gam_ls
 summary(fit_gam_ls)
 ```
 
 ```{r}
 # install.packages("gam")
 library(gam)
-fit_gam_bf <- gam(mean_severity ~ s(accident_count, df = 8) + s(mean_humidity, df = 7) + mean_visibility, data = ga)
+fit_gam_bf <- gam(accident_count ~ s(Income, df = 7) + s(traffic_signal_frac, df = 5) + Income.inequality, data = ga)
 summary(fit_gam_bf)
 ```
 
@@ -137,7 +128,7 @@ par(mfrow = c(1, 3))
 plot.Gam(fit_gam_ls, col = "red", se = TRUE)
 ```
 ```{r}
-fit_gam_1 <- gam(mean_severity ~ s(mean_humidity, df = 5) + mean_visibility, data = ga)
-fit_gam_2 <- gam(mean_severity ~ accident_count + s(mean_humidity, df = 5) + mean_visibility, data = ga)
+fit_gam_1 <- gam(accident_count ~ s(Income, df = 5) + traffic_signal_frac, data = ga)
+fit_gam_2 <- gam(accident_count ~ Income.inequality + s(Income, df = 5) + traffic_signal_frac, data = ga)
 anova(fit_gam_1, fit_gam_2, fit_gam_bf, test = "F")
 ```

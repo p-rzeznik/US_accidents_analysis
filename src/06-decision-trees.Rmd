@@ -1,0 +1,161 @@
+
+
+```{r}
+library(tree)
+library("ProjectTemplate")
+setwd("C:/Users/piotr/Workspaces/Statystyka/us_accidents_analysis")
+load.project()
+```
+Drzewa decyzyjne:
+```{r}
+ga <- na.omit(g1)
+
+```
+
+```{r}
+mean(ga$accident_count)
+```
+Tworzymy zmienną kategoryczną accident_high:
+```{r}
+ga_cat <- transform(ga, accident_high = factor(ifelse(accident_count <= mean(ga$accident_count), "No", "Yes")))
+```
+
+Tworzymy drzewo decyzyjne na podstawie danych:
+```{r}
+acc_high_tree <- tree(accident_high ~ . - accident_count, data = ga_cat)
+summary(acc_high_tree)
+```
+```{r}
+plot(acc_high_tree)
+text(acc_high_tree, pretty = 0)
+```
+Widać, że najważniejszym i podstawowym czynnikiem decydującym jest Income.
+
+```{r}
+acc_high_tree
+```
+Spróbujemy znaleźć najważniejsze predykatory oraz :
+```{r}
+set.seed(1)
+n <- nrow(ga_cat)
+train <- sample(n, n / 2)
+test <- -train
+acc_high_tree <- tree(accident_high ~ . - accident_count, data = ga_cat, subset = train)
+tree_class <- predict(acc_high_tree, newdata = ga_cat[test,], type = "class")
+table(tree_class, ga_cat$accident_high[test])
+mean(tree_class != ga_cat$accident_high[test])
+```
+
+```{r}
+plot(acc_high_tree)
+text(acc_high_tree, pretty = 0)
+```
+
+```{r}
+set.seed(1)
+acc_high_cv <- cv.tree(acc_high_tree, FUN = prune.misclass)
+acc_high_cv
+plot(acc_high_cv$size, acc_high_cv$dev, type = "b")
+```
+Najlepszy wynik dostajemy przy prune=9.
+
+```{r}
+size_opt <- acc_high_cv$size[which.min(acc_high_cv$dev)]
+acc_high_pruned <- prune.misclass(acc_high_tree, best = size_opt)
+plot(acc_high_pruned)
+text(acc_high_pruned, pretty = 0)
+```
+```{r}
+pruned_class <- predict(acc_high_pruned, newdata = ga_cat[test,], 
+                        type = "class")
+table(pruned_class, ga_cat$accident_high[test])
+mean(pruned_class != ga_cat$accident_high[test])
+```
+Dla optymalnego drzewa wynik jest o 0.2 pp lepszy. 
+
+
+Drzewa regresyjne:
+
+```{r}
+acc_tree <- tree(accident_count ~ . - State - County, data = ga)
+summary(acc_tree)
+```
+
+```{r}
+plot(acc_tree)
+text(acc_tree)
+```
+```{r}
+set.seed(1)
+n <- nrow(ga)
+train <- sample(n, n / 2)
+test <- -train
+acc_tree <- tree(accident_count ~ . - State - County, data = ga, subset = train)
+acc_pred <- predict(acc_tree, newdata = ga[test,])
+sqrt(mean((acc_pred - ga$accident_count[test])^2))
+```
+```{r}
+acc_cv <- cv.tree(acc_tree)
+plot(acc_cv$size, acc_cv$dev, type = "b")
+```
+Najbardziej optymalne jest drzewo o wielkości 4.
+
+
+```{r}
+acc_pruned <- prune.tree(acc_tree, best = 4)
+plot(acc_pruned)
+text(acc_pruned)
+```
+```{r}
+acc_pred <- predict(acc_pruned, newdata = ga[test,])
+sqrt(mean((acc_pred - ga$accident_count[test])^2))
+```
+Bagging:
+```{r}
+# install.packages("randomForest")
+library("randomForest")
+acc_bag <- randomForest(accident_count ~ .- State - County, data = ga, mtry = 13, importance = TRUE)
+acc_bag
+```
+
+```{r}
+plot(acc_bag, type = "l")
+
+```
+Ważność predyktorów:
+```{r}
+varImpPlot(acc_bag)
+
+```
+```{r}
+acc_pred_bag <- predict(acc_bag, newdata = ga[test,])
+sqrt(mean((acc_pred_bag - ga$accident_count[test])^2))
+```
+
+RMSE jest znacznie mniejszy niż dla pojedynczego drzewa regresyjnego.
+
+
+
+Boosting:
+```{r}
+library("gbm")
+acc_boost <- gbm(accident_count ~ .-State - County, data = ga, distribution = "gaussian",
+                  n.trees = 5000, interaction.depth = 4)
+acc_boost
+```
+Ważność predykatorów:
+```{r}
+summary(acc_boost)
+
+
+```
+```{r}
+plot(acc_boost, i.var = "Income")
+plot(acc_boost, i.var = "Severe.housing.problems")
+plot(acc_boost, i.var = c("Income", "Severe.housing.problems"))
+```
+```{r}
+acc_pred_boost <- predict(acc_boost, newdata = ga[test,], n.trees = 5000)
+sqrt(mean((acc_pred_boost - ga$accident_count[test])^2))
+```
+Wynik znacznie lepszy od poprzednich.
